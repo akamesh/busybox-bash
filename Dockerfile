@@ -1,6 +1,6 @@
-FROM busybox:1.30.1-glibc
+FROM busybox:stable-glibc
 
-MAINTAINER Bjoern Gruening <bjoern.gruening@gmail.com>
+MAINTAINER Akamesh.com <support@akamesh.com>
 
 ADD ./bin/bash /bin/bash
 CMD /bin/bash
