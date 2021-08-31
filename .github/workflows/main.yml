@@ -1,0 +1,70 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI to Docker Hub
+
+# git push origin --tags
+on:
+  push:
+    # no branches
+    branches:
+      - "!*"
+    # yes tags
+    tags:
+      - "v*"    
+
+# Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  dockerhub:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+          
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      # extract last portion of GITHUB_REF
+      # tag event
+      # e.g. GITHUB_REF=refs/tags/v0.2
+      # push event
+      # or  GITHUB_REF=refs/head/main
+      # https://stackoverflow.com/questions/63952543/github-actions-build-docker-image-set-name-based-on-branch-name?rq=1
+      # Assumes name of the git repo matches the docker repo
+      - name: set DOCKER_TAG and DOCKER_REPO
+        run: |
+          echo "DOCKER_TAG=$(basename $GITHUB_REF)" >> $GITHUB_ENV
+          echo "DOCKER_REPO=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
+
+      # Runs a single command using the runners shell
+      - name: show environment
+        run: |
+          env|sort 
+          pwd
+          ls -l
+
+# https://github.com/docker/build-push-action
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: docker
+          file: docker/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.DOCKER_REPO }}:latest,${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }}
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}      
